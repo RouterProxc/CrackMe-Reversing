@@ -5,31 +5,46 @@
 Для начала закинем его в DIE чтобы удостовериться что он не написан на каком-нить C# - ибо там метод реверса будет отличаться.
 
 <img width="762" height="523" alt="image" src="https://github.com/user-attachments/assets/ff06cd7a-eafd-4633-90ce-c8eb4d243a16" />
+
 Отлично, видим привычные данные - x64 C/C++
 
 Попробуем статический анализ и закинем файл в Ida Pro
+
 <img width="456" height="443" alt="image" src="https://github.com/user-attachments/assets/f7dadda4-8cff-4971-a30c-9a575c4bdb8f" />
 
+
 Далее перед нами выпадает окно с графом и функциями, открываю функцию с названием start (main не нашло)
+
 <img width="462" height="634" alt="image" src="https://github.com/user-attachments/assets/d554894a-d1bf-4adc-9bc7-735ab77b4269" />
+
 
 Ничего полезного я для себя не нашел - иду другим путем
 
 Открываем View -> Open subviews -> Strings (Или же просто Shift+F12)
+
 <img width="780" height="66" alt="image" src="https://github.com/user-attachments/assets/a5694ee0-0982-4ac1-a0a5-112ac4adbde7" />
 
+
 Что-то полезное. Видим что программа просит ввести какой-то конкретный флаг. Перейдем по ссылке в функцию которая обращается к этой строке. Нажимаем на строку двойным кликом и переходим в секцию с данными PE - .data
+
 <img width="780" height="273" alt="image" src="https://github.com/user-attachments/assets/477ecf93-ad35-436b-adfd-02350337cf3d" />
 
+
 Нажимаем правой кнопкой мыши по адресу с данными и нажимаем XRef to
+
 <img width="666" height="429" alt="image" src="https://github.com/user-attachments/assets/9acd4639-2f94-47ae-8591-49af7c5c2793" />
 
+
 Тут становится ясно что start переходим по функции в функцию и в конечном итоге добирается до sub_1400016E6. Заходим в эту функцию
+
 <img width="724" height="938" alt="image" src="https://github.com/user-attachments/assets/8d94fe24-93d6-4abc-9ba4-0f2481e8a813" />
 
 
+
 На этом моменте можно было пропатчить jnz на jz и наше приложение считало бы любой флаг кроме правильного подходящим. То есть правильный флаг бы не подошел, а любой другой программа посчитала бы верным. Однако мы хотим найти верный флаг и поэтому нажимаем F5 чтобы увидеть псевдо-код на C
+
 <img width="440" height="302" alt="image" src="https://github.com/user-attachments/assets/a96a5ba6-aeb9-442f-9989-f32a4386bdc0" />
+
 
 
 Для начала разберемся что делает - sub_1400028F0("Find and enter the correct flag:\n> ");
@@ -39,7 +54,9 @@
 Но почему не cout? Не printf? Или не puts?
 
 Зайдем внутрь функции
+
 <img width="433" height="139" alt="image" src="https://github.com/user-attachments/assets/76fda703-dd9d-48e7-8eee-5bab05e54eaa" />
+
 
 Ага, тут становится ясно что это просто кастомный printf - небольшая обфускация программы =D
 
@@ -50,14 +67,18 @@
 Но на самом деле __acrt_iob_func() - функция которая может не только принимать значения, но и выводить их. Если как параметр указан 0 - то это равноценно fgets() / scanf(). Но если как параметр указан 1 - то это можно считать printf() / puts()
 
 Опять мини обфускация программы для новичков (для меня xD)
+
 <img width="448" height="302" alt="image" src="https://github.com/user-attachments/assets/7264a649-0df1-4829-a744-cb906486e75f" />
+
 
 Дальше мы берем максимум 64 (от 0 до 63 по индексу в массиве) char`а и передаем в v3.
 
 Из этого становится ясно что длина флага не выше 64 символов, а v3 хранит длину введенного флага.
 
 Дальше идет проверка
+
 <img width="421" height="94" alt="image" src="https://github.com/user-attachments/assets/1ff8577a-19c2-4d0e-b0cd-a7b4e4b05b6d" />
+
 
 Если lengthBuf не равен 0 (мы ввели хотя бы что то) и если последний символ введенной строки равен 10 в таблице ASCII
 
@@ -70,7 +91,9 @@
 Но при выполнении этого условия последний символ (\x0A) заменяется терминирующим нулем означающим что строка закончилась
 
 Итак перейдем к последней проверке - sub_1400015B8
+
 <img width="524" height="484" alt="image" src="https://github.com/user-attachments/assets/a4d87205-396c-4612-a609-77a80f61ccd0" />
+
 
 
 Итак, мы знаем что если функция вернет что то кроме 0, то выйдет ошибка
@@ -82,7 +105,9 @@
 Чтобы получить 0 при XoR операции нужно чтобы оба операнда были одинаковыми (таким образом обнуляют регистры в ассемблере)
 
 В этом цикле мы XoR`им строку которую ввели с каким то off_140003000
+
 <img width="780" height="86" alt="image" src="https://github.com/user-attachments/assets/48432e3c-0602-4451-8886-c2645abc4cc2" />
+
 
 01000011b 01010100b 01000110b 01111011b 01000001b 01010011b 01000011b
 
@@ -95,5 +120,7 @@
 00100001b 00100001b 00100001b 01111101b
 
 XoR`им эти данные с 0 (00000000b) и получаем -> CTF{ASCIImore-like_BINASCII!!!}
+
 <img width="373" height="105" alt="image" src="https://github.com/user-attachments/assets/8a82fa07-6202-455b-bdfe-707b7046a929" />
+
 
