@@ -120,6 +120,8 @@
 
 XoR`им эти данные с 0 (00000000b) и получаем -> CTF{ASCIImore-like_BINASCII!!!}
 
+correct_input ^ bytes = 0 -> correct_input = bytes ^ 0
+
 <img width="373" height="105" alt="image" src="https://github.com/user-attachments/assets/8a82fa07-6202-455b-bdfe-707b7046a929" />
 
 
